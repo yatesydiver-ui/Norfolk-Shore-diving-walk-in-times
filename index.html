@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cromer Shore Dive Predictor</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #102a43;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 { text-align: center; color: #1982c4; margin-bottom: 5px; }
+        h3 { text-align: center; color: #627d98; font-weight: 400; margin-top: 0; margin-bottom: 25px;}
+        
+        .selector-box {
+            background-color: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #d9e2ec;
+            margin-bottom: 20px;
+        }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: #334e68; }
+        
+        .card {
+            background: #e6f4ea;
+            border-left: 5px solid #57b8ff;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .high-tide { border-left-color: #ff5964; background: #fff5f5; }
+        .low-tide { border-left-color: #38b000; background: #f4fbf0; }
+        .time-tag { font-weight: bold; font-size: 1.1em; color: #334e68; }
+        .target-time { font-size: 1.2em; font-weight: bold; color: #0b69a3; margin-top: 5px; }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 5px;
+        }
+        .badge-high { background-color: #ff5964; }
+        .badge-low { background-color: #38b000; }
+        
+        .section-title { border-bottom: 2px solid #bcccdc; padding-bottom: 5px; color: #334e68; margin-top: 25px;}
+        .input-group { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;}
+        
+        select, input, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #bcccdc;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .input-group select, .input-group input, .input-group button { flex: 1; min-width: 120px; }
+        
+        button {
+            background: #1982c4;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #136599; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Cromer Shore Dive Predictor</h1>
+    <h3>Rule: High + 1.5 hrs | Low + 1 hr</h3>
+
+    <div class="selector-box">
+        <label for="date-select">📆 Select a Dive Date:</label>
+        <select id="date-select" onchange="updateDivePredictions()">
+            </select>
+    </div>
+
+    <div class="section-title">🤿 Predictions for Selected Date</div>
+    <div id="forecast-container" style="margin-top: 15px;"></div>
+
+    <div class="section-title">➕ Quick Manual Calculator</div>
+    <div style="margin-top: 15px;" class="input-group">
+        <select id="manual-type">
+            <option value="high">High Tide</option>
+            <option value="low">Low Tide</option>
+        </select>
+        <input type="time" id="manual-time" value="12:00">
+        <button onclick="calculateManualTime()">Calculate</button>
+    </div>
+    <div id="manual-result"></div>
+</div>
+
+<script>
+    // Hardcoded 7-day forecast data starting Thursday, June 18
+    const tideData = [
+        {
+            id: "day0",
+            date: "Thursday, June 18",
+            tides: [{ type: "Low", time: "04:00" }, { type: "High", time: "09:27" }, { type: "Low", time: "16:42" }, { type: "High", time: "22:21" }]
+        },
+        {
+            id: "day1",
+            date: "Friday, June 19",
+            tides: [{ type: "Low", time: "04:46" }, { type: "High", time: "10:17" }, { type: "Low", time: "17:34" }, { type: "High", time: "23:15" }]
+        },
+        {
+            id: "day2",
+            date: "Saturday, June 20",
+            tides: [{ type: "Low", time: "05:32" }, { type: "High", time: "11:10" }, { type: "Low", time: "18:24" }]
+        },
+        {
+            id: "day3",
+            date: "Sunday, June 21",
+            tides: [{ type: "High", time: "00:09" }, { type: "Low", time: "06:20" }, { type: "High", time: "12:07" }, { type: "Low", time: "19:16" }]
+        },
+        {
+            id: "day4",
+            date: "Monday, June 22",
+            tides: [{ type: "High", time: "01:04" }, { type: "Low", time: "07:11" }, { type: "High", time: "13:09" }, { type: "Low", time: "20:11" }]
+        },
+        {
+            id: "day5",
+            date: "Tuesday, June 23",
+            tides: [{ type: "High", time: "02:04" }, { type: "Low", time: "08:08" }, { type: "High", time: "14:13" }, { type: "Low", time: "21:13" }]
+        },
+        {
+            id: "day6",
+            date: "Wednesday, June 24",
+            tides: [{ type: "High", time: "03:09" }, { type: "Low", time: "09:15" }, { type: "High", time: "15:20" }, { type: "Low", time: "22:21" }]
+        }
+    ];
+
+    // Helper math tool to add time strings
+    function addMinutes(timeStr, minsToAdd) {
+        let [hours, minutes] = timeStr.split(':').map(Number);
+        minutes += minsToAdd;
+        hours += Math.floor(minutes / 60);
+        minutes = minutes % 60;
+        hours = hours % 24;
+        
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    // Populate dropdown fields on launch
+    function initDropdown() {
+        const dropdown = document.getElementById('date-select');
+        dropdown.innerHTML = tideData.map(day => `<option value="${day.id}">${day.date}</option>`).join('');
+    }
+
+    // Main render function triggered when user selects a date
+    function updateDivePredictions() {
+        const selectedId = document.getElementById('date-select').value;
+        const selectedDay = tideData.find(day => day.id === selectedId);
+        const container = document.getElementById('forecast-container');
+        
+        let html = '';
+
+        if (selectedDay) {
+            selectedDay.tides.forEach(tide => {
+                const isHigh = tide.type === "High";
+                const addedMins = isHigh ? 90 : 60; 
+                const walkInTime = addMinutes(tide.time, addedMins);
+                const cardClass = isHigh ? 'card high-tide' : 'card low-tide';
+                const badgeClass = isHigh ? 'badge badge-high' : 'badge badge-low';
+
+                html += `
+                    <div class="${cardClass}">
+                        <span class="${badgeClass}">${tide.type} Tide</span> 
+                        <span class="time-tag">at ${tide.time}</span>
+                        <div class="target-time">🤿 Walk-in Window: ${walkInTime}</div>
+                    </div>
+                `;
+            });
+        }
+        container.innerHTML = html;
+    }
+
+    // Manual instant input conversion tool
+    function calculateManualTime() {
+        const type = document.getElementById('manual-type').value;
+        const timeInput = document.getElementById('manual-time').value;
+        const resultDiv = document.getElementById('manual-result');
+
+        if (!timeInput) return;
+
+        const isHigh = type === 'high';
+        const addedMins = isHigh ? 90 : 60;
+        const resultTime = addMinutes(timeInput, addedMins);
+
+        resultDiv.innerHTML = `
+            <div class="card ${isHigh ? 'high-tide' : 'low-tide'}" style="margin-top:10px;">
+                <strong>Result:</strong> Walk-in time for a ${type} tide at ${timeInput} is 
+                <span class="target-time" style="display:inline; margin-left:5px;">${resultTime}</span>
+            </div>
+        `;
+    }
+
+    // Start App Sequence
+    initDropdown();
+    updateDivePredictions();
+</script>
+
+</body>
+</html>
